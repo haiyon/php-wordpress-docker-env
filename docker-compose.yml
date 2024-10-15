@@ -12,7 +12,9 @@ services:
       - ./nginx/.htpasswd:/etc/nginx/.htpasswd:ro
       - ./www:/var/www/html
     depends_on:
-      - wordpress
+      # - wordpress
+      - php-fpm
+      - db
     restart: always
 
   wordpress:
@@ -29,6 +31,16 @@ services:
       WORDPRESS_DB_NAME: ${MARIADB_DATABASE}
       WORDPRESS_DB_USER: ${MARIADB_USER}
       WORDPRESS_DB_PASSWORD: ${MARIADB_PASSWORD}
+
+  php-fpm:
+    build:
+      context: ./php
+      dockerfile: dockerfile
+    volumes:
+      - ./php/custom.ini:/usr/local/etc/php/conf.d/custom.ini:ro
+      # - ./php/extensions/xx.so:/usr/local/lib/php/extensions/no-debug-non-zts-20230831/xx.so:ro
+      - ./www:/var/www/html:rw
+    restart: always
 
   db:
     image: mariadb:lts

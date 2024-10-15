@@ -1,0 +1,51 @@
+FROM php:fpm-alpine
+
+# Set working directory
+WORKDIR /var/www/html
+
+# Use China mirror to speed up package installation
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories
+
+# Install dependencies and PHP extensions
+RUN apk add --no-cache \
+        freetype-dev \
+        libjpeg-turbo-dev \
+        libpng-dev \
+        libzip-dev \
+        oniguruma-dev \
+        libxml2-dev \
+        icu-dev \
+        git \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j$(nproc) \
+        pdo_mysql \
+        mysqli \
+        gd \
+        zip \
+        bcmath \
+        opcache \
+        intl \
+        xml \
+    && pecl install redis \
+    && docker-php-ext-enable redis
+
+# Install Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Set timezone
+ENV TZ=Asia/Shanghai
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+# Create a non-root user
+RUN addgroup -g 1000 appuser && adduser -u 1000 -G appuser -s /bin/sh -D appuser
+
+# Change ownership of the working directory
+RUN chown -R appuser:appuser /var/www/html
+
+# Switch to non-root user
+USER appuser
+
+# Expose port 9000
+EXPOSE 9000
+
+CMD ["php-fpm"]
